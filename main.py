@@ -2,6 +2,9 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sb
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+import random
 
 
 df = pd.read_csv(
@@ -91,7 +94,7 @@ def group_months_in_quarter(df):
     return df
 
 
-def target_feature(df, pie):
+def target_feature(df, pie=False, heatmap=False):
     """Add features to help the model classfify
     Arg:
         Df: Dataframe
@@ -109,4 +112,25 @@ def target_feature(df, pie):
         plt.pie(df["target"].value_counts().values, labels=[0, 1], autopct="%1.1f%%")
         plt.show()
 
+    if heatmap:
+        plt.figure(figsize=(20, 8))
+        sb.heatmap(df.drop())
+
     return df
+
+
+def splitting_and_normalisation(df):
+    df = target_feature(df)
+    features = df[
+        [
+            "is_quarter_end",
+            "close-open",
+            "low-high",
+        ]
+    ]
+    target = df["target"]
+    scaler = StandardScaler()
+    features = scaler.fit_transform(features)
+    X_train, X_test, Y_train, Y_test = train_test_split(
+        features, target, test_size=0.1, random_state=random.randint(1000, 9000)
+    )
