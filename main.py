@@ -1,10 +1,14 @@
+import random
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sb
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
-import random
+from sklearn.linear_model import LogisticRegression
+from sklearn.svm import SVC
+from xgboost import XGBClassifier
+from sklearn import metrics
 
 
 df = pd.read_csv(
@@ -104,9 +108,9 @@ def target_feature(df, pie=False, heatmap=False):
     Return:
         The dataframe with new columns
     """
-    df["close-open"] = df["close"] - df["open"]
+    df["close-open"] = df["Close"] - df["Open"]
     df["low-high"] = df["Low"] - df["High"]
-    df["target"] = np.where(df["close"].shift(-1) > df["close", 1, 0])
+    df["target"] = np.where(df["Close"].shift(-1) > df["Close"], 1, 0)
 
     if pie:
         plt.pie(df["target"].value_counts().values, labels=[0, 1], autopct="%1.1f%%")
@@ -120,6 +124,13 @@ def target_feature(df, pie=False, heatmap=False):
 
 
 def splitting_and_normalisation(df):
+    """This function select the target features to train and normalise them. It also split the data in 70/30
+    Args:
+        df : Dataframe
+    Return:
+        None
+    """
+    df = group_months_in_quarter(df)
     df = target_feature(df)
     features = df[
         [
@@ -132,5 +143,24 @@ def splitting_and_normalisation(df):
     scaler = StandardScaler()
     features = scaler.fit_transform(features)
     X_train, X_test, Y_train, Y_test = train_test_split(
-        features, target, test_size=0.1, random_state=random.randint(1000, 9000)
+        features, target, test_size=0.3, random_state=random.randint(1000, 9000)
     )
+    return X_train, Y_train, X_test, Y_test
+
+
+def model_evealuiton(df):
+    model = [
+        LogisticRegression(),
+        SVC(kernel="poly", probability=True),
+        XGBClassifier(),
+    ]
+    X_train, Y_train, X_test, Y_test = splitting_and_normalisation(df)
+    for i in range(3):
+        model[i].fit(X_train, Y_train)
+        print(f"{model[i]}: ")
+        print(
+            f"Training accuracy: {metrics.roc_auc_score(Y_train, model[i].predict_proba(X_train)[:,1])}"
+        )
+        print(
+            f"Testing accuracy: {metrics.roc_auc_score(Y_test,model[i].predict_proba(X_test)[:,1])} \n"
+        )
